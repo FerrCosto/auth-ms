@@ -1,7 +1,22 @@
-import { IsEmail, IsEnum, IsNumber, IsObject, IsString } from 'class-validator';
+import {
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsObject,
+  IsString,
+} from 'class-validator';
 import { Dirrecion } from '../interfaces';
 import { Roles } from '../enums/roles-user.enum';
 
+export class Direccion {
+  @IsString()
+  city: string;
+  @IsString()
+  street: string;
+  @IsInt()
+  postal: number;
+}
 export class RegisterUserDto {
   @IsString()
   fullName: string;
@@ -10,7 +25,7 @@ export class RegisterUserDto {
   @IsString()
   password: string;
   @IsObject()
-  direccion: Dirrecion;
+  direccion: Direccion;
   @IsNumber()
   telefono: number;
   @IsEnum(() => [Roles])
