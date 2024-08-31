@@ -7,16 +7,16 @@ import { LoginUserDto, RegisterUserDto } from './dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @MessagePattern('register.user')
+  @MessagePattern('auth.register.user')
   async singUp(@Payload() registerUserDto: RegisterUserDto) {
     return this.authService.singUp(registerUserDto);
   }
-  @MessagePattern('login.user')
+  @MessagePattern('auth.login.user')
   async singIn(@Payload() loginUserDto: LoginUserDto) {
     return this.authService.singIn(loginUserDto);
   }
 
-  @MessagePattern('verify.token')
+  @MessagePattern('auth.verify.token')
   async verifyToken(@Payload() token: string) {
     return this.authService.verifyToken(token);
   }
