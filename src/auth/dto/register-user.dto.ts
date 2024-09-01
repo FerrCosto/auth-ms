@@ -28,6 +28,6 @@ export class RegisterUserDto {
   direccion: Direccion;
   @IsNumber()
   telefono: number;
-  @IsEnum(() => [Roles])
+  @IsEnum(Roles, { each: true })
   roles: Roles[] = [Roles.CLIENT];
 }

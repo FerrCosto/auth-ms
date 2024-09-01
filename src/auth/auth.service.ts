@@ -26,7 +26,7 @@ export class AuthService extends PrismaClient implements OnModuleInit {
       },
     });
 
-    if (user)
+    if (!user)
       throw new RpcException({
         status: 400,
         message: 'User already exits',
