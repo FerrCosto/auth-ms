@@ -34,4 +34,5 @@ export const envs = {
   port: envVars.PORT,
   jwt_secret: envVars.JWTSECRET,
   nats_service: envVars.NATS_SERVICE,
+  database_url: envVars.DATABASE_URL,
 };

@@ -6,7 +6,6 @@ import {
   IsObject,
   IsString,
 } from 'class-validator';
-import { Dirrecion } from '../interfaces';
 import { Roles } from '../enums/roles-user.enum';
 
 export class Direccion {
