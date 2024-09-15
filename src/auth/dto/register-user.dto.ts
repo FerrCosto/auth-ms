@@ -2,8 +2,8 @@ import {
   IsEmail,
   IsEnum,
   IsInt,
-  IsNumber,
   IsObject,
+  IsPhoneNumber,
   IsString,
 } from 'class-validator';
 import { Roles } from '../enums/roles-user.enum';
@@ -25,7 +25,7 @@ export class RegisterUserDto {
   password: string;
   @IsObject()
   direccion: Direccion;
-  @IsNumber()
+  @IsPhoneNumber('CO')
   telefono: number;
   @IsEnum(Roles, { each: true })
   roles: Roles[] = [Roles.CLIENT];
