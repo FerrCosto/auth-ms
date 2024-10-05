@@ -21,12 +21,13 @@ export class AuthService extends PrismaClient implements OnModuleInit {
     return this.jwtSecret.signAsync(user);
   }
   async singUp(registerUserDto: RegisterUserDto) {
+    const { telefono } = registerUserDto;
     const user = await this.user.findUnique({
       where: {
         email: registerUserDto.email,
       },
     });
-
+    const phone = telefono.replace(/^\+57/, '');
     if (user)
       throw new RpcException({
         status: 400,
@@ -37,7 +38,7 @@ export class AuthService extends PrismaClient implements OnModuleInit {
       data: {
         direccion: registerUserDto.direccion,
         fullName: registerUserDto.fullName,
-        telefono: registerUserDto.telefono,
+        telefono: parseInt(phone),
         roles: registerUserDto.roles,
         email: registerUserDto.email,
         password: bcrypt.hashSync(registerUserDto.password, 10),

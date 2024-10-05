@@ -26,7 +26,7 @@ export class RegisterUserDto {
   @IsObject()
   direccion: Direccion;
   @IsPhoneNumber('CO')
-  telefono: number;
+  telefono: string;
   @IsEnum(Roles, { each: true })
   roles: Roles[] = [Roles.CLIENT];
 }
