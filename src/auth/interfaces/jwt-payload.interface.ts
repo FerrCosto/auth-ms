@@ -6,6 +6,6 @@ export interface JwtPayload {
   fullName: string;
   email: string;
   telefono: number;
-  roles: Roles[];
+  roles: Roles;
   direccion: Dirrecion;
 }

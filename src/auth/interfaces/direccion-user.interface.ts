@@ -1,5 +1,6 @@
 export interface Dirrecion {
   city: string;
-  street: string;
-  postal: number;
+  address: string;
+  address2?: string;
+  zip: string;
 }

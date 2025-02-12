@@ -18,16 +18,10 @@ model User {
     fullName String
     email String @unique
     password String
-    telefono Int
-    direccion Address
-    roles Roles[]
+    roles Roles
 }
 
-type Address {
-    city String
-    street String
-    postal Int
-}
+
 enum Roles {
   ADMIN
   CLIENT

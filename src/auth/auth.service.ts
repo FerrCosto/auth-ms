@@ -1,15 +1,21 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { RegisterUserDto } from './dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './interfaces';
-import { RpcException } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { LoginUserDto } from './dto/login-user.dto';
 import { envs } from 'src/config/envs.config';
+import { Roles } from './enums/roles-user.enum';
+import { NATS_SERVICE } from 'src/config';
+import { firstValueFrom } from 'rxjs';
 @Injectable()
 export class AuthService extends PrismaClient implements OnModuleInit {
-  constructor(private readonly jwtSecret: JwtService) {
+  constructor(
+    @Inject(NATS_SERVICE) private readonly client: ClientProxy,
+    private readonly jwtSecret: JwtService,
+  ) {
     super();
   }
   async onModuleInit() {
@@ -21,33 +27,36 @@ export class AuthService extends PrismaClient implements OnModuleInit {
     return this.jwtSecret.signAsync(user);
   }
   async singUp(registerUserDto: RegisterUserDto) {
-    const { telefono } = registerUserDto;
     const user = await this.user.findUnique({
       where: {
         email: registerUserDto.email,
       },
     });
-    const phone = telefono.replace(/^\+57/, '');
+
     if (user)
       throw new RpcException({
         status: 400,
         message: 'User already exits',
       });
 
+    const data = {
+      fullName: registerUserDto.fullName,
+      roles: Roles.CLIENT,
+      email: registerUserDto.email,
+      password: bcrypt.hashSync(registerUserDto.password, 10),
+    };
+
     const createUser = await this.user.create({
-      data: {
-        direccion: registerUserDto.direccion,
-        fullName: registerUserDto.fullName,
-        telefono: parseInt(phone),
-        roles: registerUserDto.roles,
-        email: registerUserDto.email,
-        password: bcrypt.hashSync(registerUserDto.password, 10),
-      },
+      data,
     });
-    const { password: _, ...resData } = createUser;
+
+    const userInfo: any = await firstValueFrom(
+      this.client.send('user.create', data),
+    );
+
     return {
-      user: resData,
-      token: await this.singJwt(resData),
+      user: userInfo,
+      token: await this.singJwt(userInfo),
     };
   }
 
@@ -68,10 +77,13 @@ export class AuthService extends PrismaClient implements OnModuleInit {
         status: 400,
         message: `Email/Password not valid`,
       });
+    const userInfo: any = await firstValueFrom(
+      this.client.send('user.findEmail', email),
+    );
     const { password: _, ...resData } = user;
     return {
-      user: resData,
-      token: await this.singJwt(resData),
+      user: userInfo,
+      token: await this.singJwt(userInfo),
     };
   }
 
