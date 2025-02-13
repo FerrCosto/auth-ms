@@ -5,7 +5,7 @@ export interface JwtPayload {
   id: string;
   fullName: string;
   email: string;
-  telefono: number;
-  roles: Roles;
-  direccion: Dirrecion;
+  telefono?: number | null;
+  role: Roles;
+  direccion?: Dirrecion | null;
 }

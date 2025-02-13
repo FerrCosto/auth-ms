@@ -27,37 +27,62 @@ export class AuthService extends PrismaClient implements OnModuleInit {
     return this.jwtSecret.signAsync(user);
   }
   async singUp(registerUserDto: RegisterUserDto) {
-    const user = await this.user.findUnique({
-      where: {
-        email: registerUserDto.email,
-      },
-    });
-
-    if (user)
-      throw new RpcException({
-        status: 400,
-        message: 'User already exits',
+    try {
+      const user = await this.user.findUnique({
+        where: {
+          email: registerUserDto.email,
+        },
       });
 
-    const data = {
-      fullName: registerUserDto.fullName,
-      roles: Roles.CLIENT,
-      email: registerUserDto.email,
-      password: bcrypt.hashSync(registerUserDto.password, 10),
-    };
+      if (user)
+        throw new RpcException({
+          status: 400,
+          message: 'User already exits',
+        });
 
-    const createUser = await this.user.create({
-      data,
-    });
+      const data = {
+        fullName: registerUserDto.fullName,
+        roles: Roles.CLIENT,
+        email: registerUserDto.email,
+      };
 
-    const userInfo: any = await firstValueFrom(
-      this.client.send('user.create', data),
-    );
+      const userInfo: any = await firstValueFrom(
+        this.client.send('user.create', data),
+      );
 
-    return {
-      user: userInfo,
-      token: await this.singJwt(userInfo),
-    };
+      if (!userInfo) {
+        console.log(user);
+        throw new RpcException({
+          status: 400,
+          message: 'Error al llamar al microservicio',
+        });
+      }
+
+      const createUser = await this.user.create({
+        data: {
+          ...data,
+          password: bcrypt.hashSync(registerUserDto.password, 10),
+        },
+      });
+
+      const { id, ...resData } = createUser;
+      const tokenPayload = {
+        id,
+        fullName: userInfo.fullName,
+        email: userInfo.email,
+        telefono: userInfo.telefono,
+        role: userInfo.roles,
+      };
+      return {
+        token: await this.singJwt(tokenPayload),
+      };
+    } catch (error) {
+      console.log(error);
+      throw new RpcException({
+        status: 500,
+        message: 'Mirar los logs del servidor',
+      });
+    }
   }
 
   async singIn(loginUserDto: LoginUserDto) {
@@ -77,13 +102,22 @@ export class AuthService extends PrismaClient implements OnModuleInit {
         status: 400,
         message: `Email/Password not valid`,
       });
+
     const userInfo: any = await firstValueFrom(
       this.client.send('user.findEmail', email),
     );
-    const { password: _, ...resData } = user;
+
+    const { id, ...resData } = user;
+    const tokenPayload: JwtPayload = {
+      id,
+      fullName: userInfo.fullName,
+      email: userInfo.email,
+      ...(userInfo.telefono && { telefono: userInfo.telefono }),
+      role: userInfo.role,
+      ...(userInfo.direccion && { direccion: userInfo.direccion }),
+    };
     return {
-      user: userInfo,
-      token: await this.singJwt(userInfo),
+      token: await this.singJwt(tokenPayload),
     };
   }
 
