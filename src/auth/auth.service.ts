@@ -1,6 +1,4 @@
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 import { RegisterUserDto } from './dto';
 import { JwtService } from '@nestjs/jwt';
 import { JwtPayload } from './interfaces';
@@ -9,69 +7,47 @@ import { LoginUserDto } from './dto/login-user.dto';
 import { envs } from 'src/config/envs.config';
 import { Roles } from './enums/roles-user.enum';
 import { NATS_SERVICE } from 'src/config';
-import { firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom } from 'rxjs';
 @Injectable()
-export class AuthService extends PrismaClient implements OnModuleInit {
+export class AuthService {
   constructor(
     @Inject(NATS_SERVICE) private readonly client: ClientProxy,
     private readonly jwtSecret: JwtService,
-  ) {
-    super();
-  }
-  async onModuleInit() {
-    await this.$connect();
-    console.log('Contectado a la base: ', envs.database_url);
-  }
+  ) {}
 
   async singJwt(user: JwtPayload) {
     return this.jwtSecret.signAsync(user);
   }
   async singUp(registerUserDto: RegisterUserDto) {
     try {
-      const user = await this.user.findUnique({
-        where: {
-          email: registerUserDto.email,
-        },
-      });
-
-      if (user)
-        throw new RpcException({
-          status: 400,
-          message: 'User already exits',
-        });
-
       const data = {
         fullName: registerUserDto.fullName,
-        roles: Roles.CLIENT,
         email: registerUserDto.email,
+        password: registerUserDto.password,
       };
 
       const userInfo: any = await firstValueFrom(
-        this.client.send('user.create', data),
+        this.client.send('user.create', data).pipe(
+          catchError((error) => {
+            throw new RpcException(error);
+          }),
+        ),
       );
 
       if (!userInfo) {
-        console.log(user);
         throw new RpcException({
           status: 400,
           message: 'Error al llamar al microservicio',
         });
       }
 
-      const createUser = await this.user.create({
-        data: {
-          ...data,
-          password: bcrypt.hashSync(registerUserDto.password, 10),
-        },
-      });
-
-      const { id, ...resData } = createUser;
+      const { id, ...resData } = userInfo;
       const tokenPayload = {
         id,
         fullName: userInfo.fullName,
         email: userInfo.email,
-        telefono: userInfo.telefono,
-        role: userInfo.roles,
+        ...(userInfo.telefono && { telefono: userInfo.telefono }),
+        role: userInfo.role,
       };
       return {
         token: await this.singJwt(tokenPayload),
@@ -86,35 +62,22 @@ export class AuthService extends PrismaClient implements OnModuleInit {
   }
 
   async singIn(loginUserDto: LoginUserDto) {
-    const { password, email } = loginUserDto;
-
-    const user = await this.user.findUnique({
-      where: { email },
-    });
-    if (!user)
-      throw new RpcException({
-        status: 400,
-        message: `Email/Password not valid`,
-      });
-    const verifyPassword = bcrypt.compareSync(password, user.password);
-    if (!verifyPassword)
-      throw new RpcException({
-        status: 400,
-        message: `Email/Password not valid`,
-      });
-
-    const userInfo: any = await firstValueFrom(
-      this.client.send('user.findEmail', email),
+    const user = await firstValueFrom(
+      this.client.send('user.verify', loginUserDto).pipe(
+        catchError((error) => {
+          throw new RpcException(error);
+        }),
+      ),
     );
 
     const { id, ...resData } = user;
     const tokenPayload: JwtPayload = {
       id,
-      fullName: userInfo.fullName,
-      email: userInfo.email,
-      ...(userInfo.telefono && { telefono: userInfo.telefono }),
-      role: userInfo.role,
-      ...(userInfo.direccion && { direccion: userInfo.direccion }),
+      fullName: user.fullName,
+      email: user.email,
+      ...(user.telefono && { telefono: user.telefono }),
+      role: user.role,
+      ...(user.direccion && { direccion: user.direccion }),
     };
     return {
       token: await this.singJwt(tokenPayload),

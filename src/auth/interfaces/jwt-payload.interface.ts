@@ -1,4 +1,4 @@
-import { Roles } from '@prisma/client';
+import { Roles } from '../enums/roles-user.enum';
 import { Dirrecion } from './';
 
 export interface JwtPayload {

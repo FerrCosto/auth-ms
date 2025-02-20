@@ -8,6 +8,4 @@ export class RegisterUserDto {
   email: string;
   @IsString()
   password: string;
-  @IsEnum(Roles, { each: true })
-  roles: Roles = Roles.CLIENT;
 }
