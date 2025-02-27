@@ -71,13 +71,14 @@ export class AuthService {
     );
 
     const { id, ...resData } = user;
+    console.log(resData);
     const tokenPayload: JwtPayload = {
       id,
-      fullName: user.fullName,
-      email: user.email,
-      ...(user.telefono && { telefono: user.telefono }),
-      role: user.role,
-      ...(user.direccion && { direccion: user.direccion }),
+      fullName: resData.fullName,
+      email: resData.email,
+      ...(resData.telefono && { telefono: resData.telefono }),
+      role: resData.role,
+      ...(resData.addresses && { direccion: resData.addresses[0] }),
     };
     return {
       token: await this.singJwt(tokenPayload),
